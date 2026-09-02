@@ -2,224 +2,199 @@
 
 ## Scenario
 
-Maya Chen is a fictional Director of Marketplace Seller Operations at FulfillIQ, an e-commerce marketplace and fulfillment analytics environment used for this portfolio project. Q4 peak is approaching. Leadership has been forwarding customer complaints about packages that arrive late and has asked Maya for “seller lateness numbers.” Maya’s first instinct is to request a ranking of late-shipment rates. She understands that some sellers are hurting the customer experience, but she has not yet stated a decision she can take, a population, a deadline, or the actions she is actually authorized to use.
+Maya Chen is a fictional Director of Marketplace Seller Operations at FulfillIQ. FulfillIQ’s working database is a MySQL 8 local schema, `fulfilliq`, loaded from the Brazilian Olist e-commerce CSVs (nine raw tables). Maya’s answers in this interview are **mock business requirements created for the FulfillIQ portfolio project**.
 
-This document records a Stage 1–2 interview between Maya and an AI Analyst. **Maya’s answers are mock business requirements created for the FulfillIQ portfolio project.** They are not live production policy. The AI Analyst does not open the Database Context Package or the Data Profile, does not design KPIs or hypotheses, and does not write SQL or R. Stage 3 begins only after this handoff.
+This rewrite was done after reading:
+
+- `docs/FulfillIQ_Database_Context_Package.md` (schema, grains, keys, known load limits)
+- `docs/FulfillIQ_Data_Profile.md` (source-file distributions, date coverage, seller volume, quality risks)
+
+The AI Analyst uses those documents only to keep Maya’s decision inside what the data can support. It does not design KPIs, write hypotheses, write SQL or R, or begin Stage 3 measurement design.
+
+Maya begins with a realistic but incomplete metric request (a last-month US seller-lateness ranking). The data cannot support a live US 2026 marketplace view. The interview moves her to a decision that can be informed by Olist Brazil, 2016-09-04 through 2018-10-17, on delivered orders that have actual and estimated delivery timestamps.
 
 ---
 
 ## Complete Maya–AI Dialogue
 
-**Maya:** I need late shipment rate by seller for last month. Leadership wants a ranking of who’s slow. Can you just pull that?
+**Maya:** I need late shipment rate by seller for last month. Leadership wants a ranking of who’s slow in the US. Just pull it.
 
-**AI Analyst:** I can help, but a ranking is a metric, not a decision. Before we measure anything, I need to know what you would *do* with that ranking. What is going wrong in the business that made leadership ask for this?
+**AI Analyst:** I will not start with that pull. I read the Database Context Package and the Data Profile. This database is not a live US marketplace in 2026. It is Brazilian Olist loaded into MySQL `fulfilliq`: 99,441 orders, 3,095 sellers, 112,650 order-item rows. Order purchase timestamps run from 2016-09-04 to 2018-10-17. Seller geography is Brazilian states (`seller_state`), mostly SP, PR, MG, SC, RJ. There is no US region field. “Last month” in calendar 2026 is empty. If we rank “US sellers last month,” we would be inventing a population the tables do not contain. What business problem made leadership ask for names?
 
-**Maya:** Customer complaints about late packages are up. Support is sending me screenshots. Leadership thinks some of our third-party sellers are the problem and they want names. I’m supposed to “do something about seller performance” before peak.
+**Maya:** Customer complaints about late packages. They think some sellers are the problem and I am supposed to do something about seller performance before peak. I talked as if this were our current US book. I didn’t realize the sandbox is Brazil 2016–2018.
 
-**AI Analyst:** So the problem is late deliveries hitting customers, and the suspected source is a subset of third-party marketplace sellers, with peak coming. Who is asking you to act, and who actually has to live with the action?
+**AI Analyst:** It is. So the useful version of your problem is: using this historical Brazilian marketplace, which sellers look like a late-fulfillment problem you would put on a performance plan, rather than leave on standard terms. Is the decision still “enroll vs not enroll,” or did you only want a chart?
 
-**Maya:** My VP of Marketplace. I own seller operations. Support and the CX team will feel it if we get this wrong. Sellers will feel it if we put them on a plan they don’t deserve.
+**Maya:** The decision is still enroll vs not. We have used a 30-day seller performance plan: weekly check-ins, they can lose featured placement, and if they stay bad I can recommend offboarding to the VP. I cannot terminate a contract myself. I want a list I can take to the VP, not a vanity ranking.
 
-**AI Analyst:** What decision do you personally need to make? Not “see who’s late,” but a yes/no or choose-A-or-B that you will own.
+**AI Analyst:** Featured placement and “already on a plan” are operations outside this database. `raw_sellers` has `seller_id`, ZIP prefix, city, and Brazilian state only. There is no plan-status column, no 1P vs 3P flag, and no featured-placement flag. All 3,095 sellers in `raw_sellers` appear as marketplace sellers on item rows. I can still support a list of sellers whose *delivery performance in the data* would support enrollment. I cannot score “already on a plan” or “featured.” Who owns the enrollment decision?
 
-**Maya:** I think I need to decide which sellers we put on a performance plan before Q4. We’ve used a 30-day seller performance plan before: weekly check-ins, they lose featured placement if they stay bad, and if they still fail we can recommend offboarding. I don’t want to blast everyone with a dashboard and then freeze.
+**Maya:** I do. Seller ops executes the plan. The VP of Marketplace hears the recommendation on Friday 18 September 2026. That meeting date is real for this project even though the orders are historical.
 
-**AI Analyst:** That is closer to a decision: enroll specific sellers in a 30-day late-fulfillment performance plan versus leave them on standard terms. Why does that decision matter now, rather than after peak?
+**AI Analyst:** Good. The deadline is when you decide. The analysis window has to sit inside the Olist dates. Why act at all?
 
-**Maya:** Peak will multiply whatever is already late. If we wait until November we will be firefighting. If we hammer good sellers now, we lose GMV going into the season. So the cost of waiting and the cost of over-enrolling are both real.
+**Maya:** If we never name sellers, peak or no peak, we keep featuring people who deliver late. If we hammer small noisy sellers, we cut GMV and look arbitrary. I want fewer late deliveries to customers without punishing volume that is just sparse.
 
-**AI Analyst:** Who will act on the decision once you make it?
+**AI Analyst:** Outcomes to improve: fewer late customer deliveries from in-scope sellers. Outcomes to avoid: ranking sellers with tiny samples, mixing in orders that never delivered, treating Brazil as the US, and pretending a one-month 2026 extract exists. What actions can you actually take once you have a list?
 
-**Maya:** I will. Seller ops executes the plan: I notify the seller, start the 30-day clock, pull featured placement if they stay off-track. Offboarding is not mine alone. I can recommend it to the VP. I cannot terminate a seller contract by myself.
+**Maya:** Do nothing. Enroll in the 30-day plan. Pull featured placement as part of that plan, as an ops action, not as a database field. Ask account management to call. Recommend offboarding to the VP. I cannot change fees, add warehouses, or terminate contracts. Staffing: about 20 concurrent plans, no extra budget.
 
-**AI Analyst:** What actions are realistically available to you in the next few weeks? Please list what you can do and what you cannot do.
+**AI Analyst:** Scope, against the actual tables. Orders live in `raw_orders` with statuses delivered, shipped, canceled, unavailable, invoiced, processing, created, approved. 96,478 of 99,441 are `delivered`. Delivery timestamps are missing almost exactly when status is not delivered. The Data Profile says delivery KPIs must define an eligible population, not treat undelivered orders as ordinary missingness. Item-level seller is `raw_order_items.seller_id`. An order can have several item rows and therefore more than one seller. 775 orders have no item row at all. Lateness, if we ever measure it, has to use columns that exist: `order_delivered_customer_date` vs `order_estimated_delivery_date` on orders, and optionally `shipping_limit_date` on items. I am not locking a formula today. I am telling you what is there. Does your decision concern sellers on delivered orders, or every status?
 
-**Maya:** I can do nothing and keep monitoring. I can enroll a seller in the 30-day performance plan. I can remove featured placement as part of that plan. I can ask account management to call a seller. I can recommend offboarding to the VP. I cannot change the marketplace fee schedule. I cannot add warehouse capacity. I cannot pay sellers to ship faster. I cannot redesign the website.
+**Maya:** Delivered orders only. If it never reached the customer, it is not this performance-plan decision. I don’t want canceled or unavailable in the ranking.
 
-**AI Analyst:** When must you decide?
+**AI Analyst:** Confirmed: eligible orders are `order_status = 'delivered'`. The profile also notes 8 delivered orders lack a customer-delivery timestamp, and 96,470 delivered orders have both actual and estimated delivery timestamps. Stage 3 will have to say whether those 8 are dropped. Time window: 2016 is 329 orders. 2017 is 45,101. 2018 is 54,011, but September–October 2018 together have only 20 purchases, so they are not comparable months. Reviews also stop at 2018-08-31. The profile forbids treating partial edge periods as full months. I will not use “last 90 days of 2026.” What window do you want inside the complete data?
 
-**Maya:** I need a recommendation I can take to the VP by Friday, 18 September 2026. If we enroll people, I want the 30-day clock to start before October so we have a reading before peak volume really hits.
+**Maya:** I wanted last month because leadership said last month. That was the wrong clock. Use a complete 2018 window before the broken tail. January through August 2018.
 
-**AI Analyst:** Scope: which sellers, orders, products, customers, regions, and time periods are in this, and which are out?
+**AI Analyst:** I will record 1 January 2018 through 31 August 2018 as your confirmed analysis period, with purchase timestamp in that range. Not 2016, not Sep–Oct 2018, not a 2026 month. Geography: 23 seller states, 27 customer states, Brazil. About 60% of sellers are in SP. Do you want all Brazilian sellers in the data, or only SP?
 
-**Maya:** US marketplace only. Third-party sellers, not FulfillIQ first-party catalog. Active sellers, not already suspended. I don’t want a global view. I’m not trying to fix apparel vs electronics as a category strategy. Customers are whoever bought from those US 3P listings. Time period… I said last month because that’s what leadership asked for. I’m not sure last month is long enough.
+**Maya:** All sellers in the database. Do not drop the other states just because SP is large. Do not filter to the US. There is no US.
 
-**AI Analyst:** Last month is a reporting window, not necessarily the right evidence window. If one slow week can put a good seller on a plan, you will over-enroll. What outcome do you want to improve, and what negative outcome must we avoid?
+**AI Analyst:** Volume. The Data Profile is explicit that seller samples are skewed and that Stage 3 must set a minimum delivered-order guardrail rather than invent one inside SQL. Median delivered orders per seller is 6. Coverage if we require a minimum of delivered orders: 5 → 57% of sellers; 10 → 40%; 20 → 26%; 30 → 20%; 50 → 14% (425 sellers); 100 → 7%. You said you will not chase a handful of orders. I will not pick a number for you. Which floor do you accept for this fictional project?
 
-**Maya:** Improve: fewer late deliveries to customers from 3P US sellers before and into peak. Avoid: putting decent sellers on a plan because of a short noisy month, cutting GMV, or missing the actual late sellers because we stared at a vanity ranking.
+**Maya:** Fifty feels clean but that throws away most sellers. Thirty. I’ll accept 30 delivered orders in the analysis window as a provisional floor only. Stage 3 must not call it a signed SLA. Show the denominator next to any seller figure.
 
-**AI Analyst:** What evidence would you need before you enroll someone? Would a single ranking of “late rate last month” be enough?
+**AI Analyst:** Recorded as an accepted provisional assumption: at least 30 delivered orders for that seller in 1 Jan–31 Aug 2018. Not a company SLA. Official on-time target: do you have a signed percentage?
 
-**Maya:** No. I would look stupid if we punish a seller who shipped 12 orders. I need a long enough window, some minimum volume so I’m not chasing noise, and I need to know the delay is the seller’s fulfillment performance, not us holding the order. I also don’t want to act on cancelled orders that never shipped. I don’t have the exact cutoff numbers in my head.
+**Maya:** People say 95%. I have not signed it. Do not put 95% in the question or treat the profile’s descriptive 8.11% late share as my KPI. That 8.11% was labeled descriptive only.
 
-**AI Analyst:** Then your original request, “late shipment rate by seller last month,” is a slide, not the decision. The decision I think you need is this:
+**AI Analyst:** Correct. The profile’s 7,826 / 96,470 late count used a provisional rule `actual > estimated` and is not an approved metric. Open question: official target. Also open: whether Stage 3 uses timestamp or calendar-date precision; whether lateness is customer-delivery vs estimate, or seller `shipping_limit_date` vs carrier handoff; how to treat 166 carrier-before-purchase and 23 delivery-before-carrier rows; how to collapse multi-item, multi-seller orders to a seller-order grain; whether reviews belong in this decision at all. Do you want reviews in this decision?
 
-*Maya, as Director of Marketplace Seller Operations, will decide by 18 September 2026 whether to enroll currently active US third-party marketplace sellers into a 30-day late-fulfillment performance plan before Q4 peak, in order to reduce late customer deliveries without cutting GMV from sellers whose delays are too noisy, out of scope, or outside her authority to fix.*
+**Maya:** No. Complaints started this, but the decision is late fulfillment, not review-score management. Don’t join reviews for the primary question. Payments neither. Don’t use raw geolocation ZIP coordinates. State on `raw_sellers` is enough if we slice geography later.
 
-Does that name the owner, the action, the group affected, the purpose, and the timing? What do you want changed?
+**AI Analyst:** Confirmed exclusions: reviews, payments, and raw geolocation joins are out of this decision’s primary path. Categories are also not this decision unless you say so.
 
-**Maya:** Almost. Say that leaving them on standard terms is the alternative. And say I can recommend offboarding but that is not this decision. This decision is the plan vs standard terms.
+**Maya:** Not this decision. I am not doing a category strategy.
 
-**AI Analyst:** Revised decision:
+**AI Analyst:** Evidence standard?
 
-*Maya, as Director of Marketplace Seller Operations, will decide by 18 September 2026 which currently active US third-party marketplace sellers, if any, to enroll in a 30-day late-fulfillment performance plan rather than leave on standard terms, in order to reduce late customer deliveries before Q4 peak without penalizing in-scope sellers whose recent delays are too noisy or outside the actions she is authorized to take. Offboarding remains a later recommendation to the VP, not this decision.*
+**Maya:** I need a VP-defensible list from delivered Brazilian orders in Jan–Aug 2018, with a volume floor, not a one-month ranking, not a 2026 extract, not undelivered statuses. If we cannot tell seller fulfillment from everything else, say so. I will not enroll from impossible timestamps if Stage 3 flags them. Cap the operable list at about 20 names because of staffing.
 
-Do you approve that sentence?
+**AI Analyst:** Proposed one-sentence decision, against this database:
 
-**Maya:** Yes. That is the decision. I approve it.
+*Maya, as Director of Marketplace Seller Operations, will decide by 18 September 2026 which FulfillIQ marketplace sellers in the Olist Brazil sandbox, if any, to enroll in a 30-day late-fulfillment performance plan rather than leave on standard terms, using delivered orders those sellers fulfilled with purchase timestamps from 1 January 2018 through 31 August 2018, in order to reduce late customer deliveries without ranking tiny-sample or out-of-scope sellers, and without treating offboarding, US geography, or a live 2026 month as things this database contains.*
 
-**AI Analyst:** Before we freeze Stage 1, I need constraints. These will bind Stage 3. If you don’t know, we will leave it open rather than invent it. First: decision deadline. You said 18 September 2026. Confirmed?
+What do you want changed?
 
-**Maya:** Confirmed. VP meeting that Friday.
+**Maya:** Say the plan and featured-placement execution sit outside the tables. And say I can recommend offboarding to the VP but that is not this decision.
 
-**AI Analyst:** Analysis period. You were unsure about “last month.” What window should we evaluate performance over?
+**AI Analyst:** Revised:
 
-**Maya:** Use the last 90 days before the analysis run. A month is too jumpy. I don’t want a full year; that mixes last peak into this decision. 90 days is what I’ll stand behind for this project.
+*Maya, as Director of Marketplace Seller Operations, will decide by 18 September 2026 which sellers in the FulfillIQ Olist Brazil database, if any, to enroll in a 30-day late-fulfillment performance plan rather than leave on standard terms. The list must be informed by delivered orders those sellers fulfilled with `order_purchase_timestamp` from 1 January 2018 through 31 August 2018. The purpose is to reduce late customer deliveries before she takes a recommendation to the VP, without penalizing sellers whose volume is too small or whose orders are outside the eligible delivered population. Plan operations (notification, featured-placement changes) are outside the database. Offboarding remains a later VP recommendation, not this decision. The data are Brazilian 2016–2018 Olist tables, not a US 2026 extract.*
 
-**AI Analyst:** I will record “last 90 days before the analysis run” as a confirmed constraint from you, not as my invention. Next: minimum seller or order volume. You said you will not chase tiny volume. Do you have a number?
+Do you approve that decision?
 
-**Maya:** Not a company rule. I don’t want sellers with a handful of orders. If you need a working floor for this fictional project, use at least 50 shipped orders in that 90-day window. I’ll accept that as a provisional assumption. Stage 3 should not pretend it is a signed SLA.
+**Maya:** Yes. I approve it. Mock requirements only.
 
-**AI Analyst:** Recorded as an accepted provisional assumption: at least 50 shipped orders in the 90-day window. Existing performance targets: is there an official on-time or late-delivery target I should treat as law?
+**AI Analyst:** Constraints read-back before Stage 2.
 
-**Maya:** Leadership talks like 95% on-time is the vibe. I have not been given a signed seller SLA number for this exercise. Do not treat 95% as a confirmed target. Stage 3 must not bake in a threshold I didn’t approve.
+Confirmed from you and from the documents: decision date 18 September 2026; analysis purchases 2018-01-01 through 2018-08-31; Brazil only, all seller states in `raw_sellers`; delivered orders only; sellers identified from `raw_order_items.seller_id`; no US filter; no 2026 month; no reviews/payments/geolocation/category as primary inputs; staffing cap ~20 enrollments; no extra budget; you cannot terminate contracts; 95% is not approved; the profile’s 8.11% is not a KPI; median seller volume is 6 so a floor is mandatory.
 
-**AI Analyst:** So “95% on-time” is an open question, not a constraint. What counts as acceptable vs unacceptable performance in your own words, without a formula?
+Provisional, you accepted: at least 30 delivered orders for that seller in the analysis window.
 
-**Maya:** Acceptable: a seller who is generally getting paid-for orders to customers on time, with the occasional miss. Unacceptable: a pattern of lateness that I would be willing to put on a 30-day plan and, if needed, take to the VP. I am not giving you a cutoff percentage today.
+Open, because you or the documents left them unset: official late/on-time threshold; timestamp vs date precision; customer-delivery-vs-estimate vs shipping-limit definition; anomaly rows (166 + 23, plus four 2020 shipping-limit dates); exact seller-order grain rule; the 8 delivered orders missing customer-delivery dates; live MySQL vs source-profile reconciliation; whether “already on a plan” can ever be known (no such column).
 
-**AI Analyst:** Include and exclude. Please confirm the population.
+**Maya:** That split is right. Freeze Stage 1.
 
-**Maya:** Include: currently active US third-party marketplace sellers. Include orders those sellers were responsible for fulfilling. Exclude: sellers already suspended. Exclude: FulfillIQ first-party / owned-catalog fulfillment. Exclude: non-US marketplace. Exclude: orders cancelled before they shipped. Exclude: sellers already on a live performance plan, if we can see that; I don’t want to double-enroll. If we cannot see “already on a plan” in the data, that is an open question, not a fake flag.
+**AI Analyst:** Stage 2. Framing question. It has to support that decision, name the population this database actually has, stay neutral, and not embed an unapproved formula.
 
-**AI Analyst:** Budget, staffing, contractual, or operational limits?
+Draft 1, your original: *Which US sellers were late last month?* Unsupported. No US, no 2026 month.
 
-**Maya:** Seller ops can run the 30-day plan for about 20 sellers without extra headcount. If the analysis dumps 80 names, I cannot operationally enroll 80. I will not enroll more than 20. That is a real staffing limit. No extra budget. I cannot change contracts except through the VP for offboarding.
+Draft 2: *Which sellers are below 95% on-time?* Embeds an unapproved threshold and treats the descriptive 8.11% rule as decided.
 
-**AI Analyst:** Actions you are authorized to take: we already listed them. Risks and unintended consequences you care about?
+Draft 3: *In January–August 2018, among sellers in the FulfillIQ Olist Brazil data with enough delivered orders, which sellers’ late-fulfillment performance would support Maya’s decision to enroll them in a 30-day plan rather than leave them on standard terms?*
 
-**Maya:** False positives: good sellers lose featured placement and GMV. False negatives: a genuinely late seller stays featured into peak. Seller revolt if we look arbitrary. Support load if we do nothing. I also don’t want Stage 3 to “find” a category strategy or a carrier problem and call that my seller plan. If the lateness is not the seller’s fulfillment, I should not enroll them.
+Plain language: we ask which in-scope Brazilian sellers, in a complete 2018 window, look like the late-fulfillment problem you would use the plan for. We do not define “late” as SQL yet. Stage 3 still has to design measurement from `order_delivered_customer_date`, `order_estimated_delivery_date`, and possibly `shipping_limit_date`, at a grain that does not explode items into fake extra orders.
 
-**AI Analyst:** How strong does the evidence need to be before you act?
-
-**Maya:** Strong enough that I can defend the list in the VP meeting with more than a one-month ranking. Volume floor, 90 days, US 3P only, shipped orders only. I will not enroll from a single noisy week. I do not need academic proof. I do need to show the list is not random. If Stage 3 cannot separate seller fulfillment delay from other delay, I want that called out rather than a fake ranking.
-
-**AI Analyst:** I will not invent any further constraint. Let me read back the constraint classes, then we freeze Stage 1.
-
-Confirmed from you: decision by 18 September 2026; last 90 days as the analysis period; US 3P active sellers only; exclude first-party, non-US, pre-ship cancellations, already suspended; you can enroll in the 30-day plan, remove featured placement as part of it, recommend offboarding but not execute it; staffing cap of about 20 enrollments; no extra budget; evidence must survive VP scrutiny and must not be a one-month ranking.
-
-Provisional, because you accepted my suggested number: at least 50 shipped orders in the 90-day window.
-
-Open: official on-time / late threshold; whether “already on a performance plan” exists as a usable field; whether lateness can be attributed to seller fulfillment versus other parties in the data we have not opened yet.
-
-**Maya:** That split is fair. I approve the decision and those constraint classes. Mock requirements only, for the portfolio.
-
-**AI Analyst:** Stage 2. We turn the approved decision into one analytical framing question. The question has to support the decision, name the population, name the issue, include the scope you gave, stay neutral, and not sneak in a KPI formula or a 95% line.
-
-Draft 1: *Which US third-party sellers were late last month?* That is your original metric request. It does not support the enroll-or-not decision, it assumes last month, and it has no volume or action.
-
-Draft 2: *Which sellers are below 95% on-time and should be put on a plan?* That embeds an unapproved threshold and assumes the answer is a list of guilty sellers.
-
-Draft 3, the one I want you to consider: *Over the last 90 days, among currently active US third-party marketplace sellers in scope, which sellers’ late-fulfillment performance would justify enrollment in a 30-day performance plan before Q4 peak, rather than remaining on standard terms?*
-
-Plain language: we are not asking “who looks bad on a chart.” We are asking which in-scope sellers, in the window you chose, look like the kind of late-fulfillment problem that would make you use the plan, versus the kind you would leave alone. It does not define “late” as a formula. Stage 3 still has to design measurement. It names US 3P, 90 days, and the two actions: enroll vs standard terms.
-
-**Maya:** Add that we only care about sellers we could actually enroll, meaning not already suspended, not first-party. And don’t say “would justify” as if the model decides. I decide. The question should be what the analysis must answer for me.
-
-**AI Analyst:** Revised: *Over the last 90 days, among currently active US third-party marketplace sellers who are in scope for a new 30-day performance plan, which sellers show late-fulfillment performance that would support Maya’s decision to enroll them before Q4 peak, rather than leave them on standard terms?*
-
-That still stays neutral: it does not say they should be enrolled. It does not put a percentage in the question. It names who is evaluated, what issue, which window, and which decision.
-
-**Maya:** One more tweak. Say “shipped orders those sellers fulfilled” so we are not mixing in cancelled-before-ship. Then I approve it.
+**Maya:** Put delivered orders and the 2018 window in the question. Put that this is the Olist Brazil sandbox. Don’t put 30 in the question; that floor is provisional. Don’t put 95%. Then I approve it.
 
 **AI Analyst:** Final framing question:
 
-*Over the last 90 days, among currently active US third-party marketplace sellers who are in scope for a new 30-day performance plan, which sellers show late-fulfillment performance on shipped orders they were responsible for fulfilling that would support Maya’s decision to enroll them before Q4 peak, rather than leave them on standard terms?*
+*Among sellers in the FulfillIQ Olist Brazil database who fulfilled delivered orders with purchase timestamps from 1 January 2018 through 31 August 2018, which sellers show late-fulfillment performance that would support Maya’s decision to enroll them in a 30-day performance plan, rather than leave them on standard terms?*
 
-Do you approve this as the single primary framing question?
+Do you approve that as the single primary framing question?
 
-**Maya:** Yes. I approve that question. Do not add a second primary question. Category mix and carrier issues can be comments later. They are not this decision.
+**Maya:** Yes. I approve it. No second primary question. No SQL. No KPI formula in the question.
 
-**AI Analyst:** Confirmed. We stop here. No KPI design, no hypotheses, no SQL, no R, no database or data-profile review. Stage 3 receives the decision, this question, the constraint table, and the open questions. It may not treat 95% or any other unapproved cutoff as settled.
+**AI Analyst:** We stop. Stage 3 gets this handoff plus the Database Context Package and the Data Profile. It must not treat 95%, the 8.11% descriptive share, a US filter, a 2026 month, or a geolocation join as settled. It must declare grain so item and payment fan-out cannot silently multiply sellers’ orders.
 
-**Maya:** Good. Use this for the handoff.
+**Maya:** Use this rewrite.
 
 ---
 
 ## Final Business Decision
 
-Maya, as Director of Marketplace Seller Operations, will decide by 18 September 2026 which currently active US third-party marketplace sellers, if any, to enroll in a 30-day late-fulfillment performance plan rather than leave on standard terms, in order to reduce late customer deliveries before Q4 peak without penalizing in-scope sellers whose recent delays are too noisy or outside the actions she is authorized to take. Offboarding remains a later recommendation to the VP, not this decision.
+Maya, as Director of Marketplace Seller Operations, will decide by 18 September 2026 which sellers in the FulfillIQ Olist Brazil database, if any, to enroll in a 30-day late-fulfillment performance plan rather than leave on standard terms. The list must be informed by delivered orders those sellers fulfilled with `order_purchase_timestamp` from 1 January 2018 through 31 August 2018. The purpose is to reduce late customer deliveries before she takes a recommendation to the VP, without penalizing sellers whose volume is too small or whose orders are outside the eligible delivered population. Plan operations (notification, featured-placement changes) are outside the database. Offboarding remains a later VP recommendation, not this decision. The data are Brazilian 2016–2018 Olist tables, not a US 2026 extract.
 
 ## Final Analytical Framing Question
 
-Over the last 90 days, among currently active US third-party marketplace sellers who are in scope for a new 30-day performance plan, which sellers show late-fulfillment performance on shipped orders they were responsible for fulfilling that would support Maya’s decision to enroll them before Q4 peak, rather than leave them on standard terms?
+Among sellers in the FulfillIQ Olist Brazil database who fulfilled delivered orders with purchase timestamps from 1 January 2018 through 31 August 2018, which sellers show late-fulfillment performance that would support Maya’s decision to enroll them in a 30-day performance plan, rather than leave them on standard terms?
 
 ## Business Constraints
 
-Maya’s answers below are mock business requirements created for the FulfillIQ portfolio project.
+Maya’s answers are mock business requirements created for the FulfillIQ portfolio project. Facts about tables, dates, and volume come from the Database Context Package and the Data Profile, not from invented marketplace fields.
 
 | Constraint | Status | Maya’s answer | Stage 3 implication |
 | ---------- | ------ | ------------- | ------------------- |
-| Decision deadline | Confirmed constraint | Recommendation due Friday, 18 September 2026, for a VP meeting. 30-day plans should be able to start before October. | Do not design a measurement program that cannot inform a decision by that date. |
-| Analysis period | Confirmed constraint | Last 90 days before the analysis run. Not last month. Not a full year. | Stage 3 may not substitute a different window without returning to the decision owner. |
-| Geography | Confirmed constraint | US marketplace only. | Non-US sellers and orders are out of scope. |
-| Seller type | Confirmed constraint | Currently active third-party marketplace sellers. Exclude first-party / owned-catalog fulfillment. Exclude already suspended sellers. | Do not mix 1P fulfillment into a 3P performance-plan list. |
-| Order population | Confirmed constraint | Shipped orders the seller was responsible for fulfilling. Exclude orders cancelled before they shipped. | Do not treat pre-ship cancellations as late fulfillments. |
-| Already on a performance plan | Open question | Exclude if visible in the data; Maya does not want to double-enroll. If the data cannot show this, do not invent a flag. | Stage 3 must not silently assume an “on plan” attribute exists. |
-| Minimum volume | Accepted provisional assumption | Maya did not have a signed rule. She accepted “at least 50 shipped orders in the 90-day window” for this fictional project only. | Use 50 as a working floor. Do not present it as a company SLA. Note it as provisional in Stage 3. |
-| Official on-time / late target | Open question | Leadership “vibe” of 95% on-time is not a signed SLA for this exercise. Maya refused to approve a cutoff percentage. | Do not embed 95% or any other unapproved threshold in a KPI or in the framing question. |
-| Acceptable vs unacceptable | Confirmed constraint (qualitative only) | Acceptable: generally on-time with occasional misses. Unacceptable: a lateness pattern Maya would put on a 30-day plan. No numeric cutoff given. | Stage 3 designs measurement; it does not invent a pass/fail line Maya did not approve. |
-| Staffing / ops capacity | Confirmed constraint | Seller ops can run about 20 concurrent 30-day plans without extra headcount. No extra budget. | A raw list longer than ~20 names is not an operable decision. Rank or otherwise support a cap; do not dump 80 enrollments. |
-| Contractual limits | Confirmed constraint | Maya cannot change fee schedules or terminate seller contracts. Offboarding is a VP recommendation only. | Do not frame the output as “sellers to terminate.” |
-| Operational limits | Confirmed constraint | Maya cannot add warehouse capacity, pay sellers to ship faster, or redesign the site. | Do not turn the analysis into a capacity or UX project. |
-| Evidence standard | Confirmed constraint | Must survive VP scrutiny. Not a one-month ranking. Not a handful of orders. If seller-fulfillment delay cannot be separated from other delay, say so rather than force a ranking. | Stage 3 must not hide attribution limits. |
-| Attribution of delay | Open question | Maya will not enroll sellers if lateness is not their fulfillment. Whether the data can support that split is unknown because Stage 3 sources have not been opened here. | Do not invent carrier, warehouse, or customer-caused delay fields. |
+| Decision deadline | Confirmed constraint | VP recommendation due 18 September 2026. | Measurement must be completable for that meeting. The order clock is 2018, not 2026. |
+| Data universe | Confirmed constraint (from documents) | MySQL schema `fulfilliq`; Brazilian Olist; 9 raw tables; purchases 2016-09-04 to 2018-10-17; 3,095 sellers; 99,441 orders. | Do not design for a US 2026 marketplace or for tables that were not built. |
+| Analysis period | Confirmed constraint | Purchases from 1 January 2018 through 31 August 2018. | Exclude 2016 (329 orders), Sep–Oct 2018 (20 purchases combined), and any 2026 window. |
+| Geography | Confirmed constraint | All seller states present in `raw_sellers` (Brazil). Not US. Not SP-only. | Use `seller_state` / `seller_city` if sliced. Do not join raw `raw_geolocation` for this decision. |
+| Eligible orders | Confirmed constraint | `order_status = 'delivered'` only. | Do not treat shipped/canceled/unavailable/invoiced/processing/created/approved as this plan population. |
+| Eligible sellers | Confirmed constraint | Sellers on `raw_order_items.seller_id` for those delivered orders. | 775 orders have no item row and cannot contribute a seller. |
+| Plan / featured / 1P flags | Confirmed constraint (absence) | No such columns. All sellers in this extract are marketplace sellers. | Do not invent plan-status or 1P/3P filters. |
+| Minimum volume | Accepted provisional assumption | Maya accepted ≥30 delivered orders for that seller in the analysis window after seeing the profile’s 5/10/20/30/50/100 coverage table. Median seller volume is 6. | Use 30 as a working floor. Report the denominator. Do not call it a signed SLA. Do not silently switch to 50 or 10. |
+| Official on-time target | Open question | 95% was mentioned as a vibe only. Maya refused to approve it. | Do not embed 95% or the profile’s descriptive 8.11% late share as a KPI. |
+| Acceptable vs unacceptable | Confirmed constraint (qualitative) | Acceptable: generally on time with occasional misses. Unacceptable: a lateness pattern she would put on a 30-day plan. No cutoff %. | Stage 3 designs measurement; it does not invent a pass line. |
+| Staffing | Confirmed constraint | About 20 concurrent 30-day plans; no extra budget. | A raw list longer than ~20 is not operable. |
+| Authority | Confirmed constraint | Maya enrolls, can request AM contact, can recommend offboarding. Cannot terminate, change fees, or add capacity. | Output is an enrollment list, not a termination list. |
+| Reviews / payments / categories | Confirmed constraint | Out of this primary decision. | Do not require those joins to answer the framing question. |
+| Evidence standard | Confirmed constraint | VP-defensible; complete 2018 window; volume floor; delivered only; Brazil; say so if seller fulfillment cannot be separated from other delay. | Do not hide attribution or data-quality limits. |
+| Delivery-timestamp eligibility | Open question | 8 delivered orders lack customer-delivery dates; 96,470 have both actual and estimated. | Stage 3 must declare whether the 8 are dropped. |
+| Lateness definition | Open question | Columns exist (`order_delivered_customer_date`, `order_estimated_delivery_date`, item `shipping_limit_date`). Maya did not approve a formula or timestamp vs date precision. | Do not treat the profile’s provisional `actual > estimated` rule as locked. |
+| Event-sequence anomalies | Open question | 166 carrier-before-purchase; 23 delivery-before-carrier; 4 item rows with 2020 shipping-limit dates. | Stage 3 must flag or exclude; do not silently drop them from QA counts. |
+| Grain | Open question | Item rows can repeat `order_id`; an order can have more than one seller. Profile recommends seller-order grain after consolidating items. Maya did not lock SQL. | Stage 3 must declare grain so joins do not multiply orders. |
+| Live MySQL vs source profile | Open question | Profile was computed from source files, not a live query. Grand total in the context package (1,450,922) is an arithmetic error; profile corrects to 1,550,922. | Stage 4 must reconcile to MySQL. Stage 3 must not pretend the live server was already queried. |
 
 ## Decision Authority and Available Actions
 
-Maya owns the enrollment decision. She can:
+Maya owns the enrollment decision. She can leave a seller on standard terms, enroll them in the 30-day late-fulfillment plan, change featured placement as an operations step outside the database, ask account management to contact the seller, and recommend offboarding to the VP.
 
-- Leave a seller on standard terms (monitor, no plan).
-- Enroll a seller in the 30-day late-fulfillment performance plan.
-- Remove featured placement as part of that plan.
-- Ask account management to contact a seller.
-- Recommend offboarding to the VP of Marketplace.
-
-She cannot:
-
-- Terminate a seller contract on her own.
-- Change marketplace fees.
-- Add fulfillment capacity or spend budget to buy faster shipping.
-- Enroll more sellers than seller ops can run (~20).
-- Act on non-US, first-party, already suspended, or pre-ship-cancelled volume as if it were this decision.
+She cannot terminate contracts, change fees, add capacity, filter to the US, score a 2026 month, or enroll more than about 20 sellers at once.
 
 ## Accepted Provisional Assumptions
 
-- For this fictional project only, a seller must have at least 50 shipped orders in the 90-day analysis window to be eligible for consideration. Maya explicitly accepted this floor. It is not a signed company SLA.
+- For this fictional project only, a seller must have at least 30 delivered orders with purchase timestamps in 1 January 2018–31 August 2018 to be eligible for consideration. Maya explicitly accepted this after seeing the Data Profile coverage table. It is not a signed SLA.
 
-No other AI-proposed numbers were accepted.
+No other AI-proposed numeric cutoff was accepted. The profile’s descriptive late share (7,826 / 96,470, 8.11%) was explicitly rejected as a KPI.
 
 ## Open Questions
 
 Stage 3 must not silently decide these:
 
-1. Whether an official on-time or late-delivery target exists, including the unofficial 95% figure.
-2. Whether “already on a performance plan” is a usable field; if not, double-enrollment risk remains.
-3. Whether late delivery can be attributed to the seller’s fulfillment versus other parties; the Database Context Package and Data Profile were not opened in Stages 1–2.
-4. Exact product, customer, or carrier cuts beyond US 3P shipped orders; Maya did not authorize a category strategy.
-5. How to treat sellers between the qualitative “occasional miss” and “pattern of lateness” without an approved numeric cutoff.
+1. Official on-time or late-delivery target, including 95%.
+2. Whether lateness uses timestamp or calendar date, and whether it is customer delivery vs estimate, seller shipping-limit vs carrier, or both.
+3. Treatment of 8 delivered orders missing customer-delivery timestamps.
+4. Treatment of 166 carrier-before-purchase rows, 23 delivery-before-carrier rows, and 4 item rows with 2020 shipping-limit dates.
+5. Exact analytical grain (order vs seller-order vs item) given multi-item, multi-seller orders.
+6. Whether “already on a performance plan” can be known (no column exists).
+7. Live MySQL value-level agreement with the source-file profile, including the corrected 1,550,922 row total.
+8. Any category, payment, review, or ZIP-coordinate cut Maya did not authorize.
 
 ## Stage 3 Handoff
 
-* **Final business decision:** Maya, as Director of Marketplace Seller Operations, will decide by 18 September 2026 which currently active US third-party marketplace sellers, if any, to enroll in a 30-day late-fulfillment performance plan rather than leave on standard terms, in order to reduce late customer deliveries before Q4 peak without penalizing in-scope sellers whose recent delays are too noisy or outside the actions she is authorized to take. Offboarding remains a later recommendation to the VP, not this decision.
-* **Final framing question:** Over the last 90 days, among currently active US third-party marketplace sellers who are in scope for a new 30-day performance plan, which sellers show late-fulfillment performance on shipped orders they were responsible for fulfilling that would support Maya’s decision to enroll them before Q4 peak, rather than leave them on standard terms?
+* **Final business decision:** Maya, as Director of Marketplace Seller Operations, will decide by 18 September 2026 which sellers in the FulfillIQ Olist Brazil database, if any, to enroll in a 30-day late-fulfillment performance plan rather than leave on standard terms, using delivered orders those sellers fulfilled with `order_purchase_timestamp` from 1 January 2018 through 31 August 2018.
+* **Final framing question:** Among sellers in the FulfillIQ Olist Brazil database who fulfilled delivered orders with purchase timestamps from 1 January 2018 through 31 August 2018, which sellers show late-fulfillment performance that would support Maya’s decision to enroll them in a 30-day performance plan, rather than leave them on standard terms?
 * **Decision owner:** Maya Chen, Director of Marketplace Seller Operations (fictional).
-* **Available actions:** Monitor / standard terms; enroll in 30-day plan; remove featured placement as part of the plan; request an account-management contact; recommend offboarding to the VP. Not available: contract termination, fee changes, capacity spend, site redesign, >~20 concurrent plans.
-* **Analysis scope:** Currently active US third-party marketplace sellers; shipped orders those sellers fulfilled; last 90 days before the analysis run; exclude first-party fulfillment, non-US, pre-ship cancellations, already suspended sellers.
+* **Available actions:** Monitor / standard terms; enroll in 30-day plan; featured-placement change as ops, not as a table; AM contact; recommend offboarding. Not available: contract termination, fee changes, capacity spend, US filter, 2026 extract, >~20 concurrent plans.
+* **Analysis scope:** Schema `fulfilliq`; Brazilian Olist; `raw_orders` delivered only; sellers from `raw_order_items.seller_id`; purchases 2018-01-01 through 2018-08-31; all seller states in `raw_sellers`; no primary use of reviews, payments, categories, or raw geolocation.
 * **Decision deadline:** 18 September 2026.
-* **Confirmed constraints:** Deadline; 90-day window; US 3P active population; shipped-only; qualitative acceptable/unacceptable without a formula; ~20 enrollment cap; no extra budget; VP-defensible evidence; no one-month ranking.
-* **Accepted provisional assumptions:** ≥50 shipped orders in the 90-day window (fictional working floor only).
-* **Open questions:** Official performance target; visibility of current plan status; attribution of delay to seller vs other parties; any further cuts Maya did not authorize; numeric cutoff between noise and a plan-worthy pattern.
-* **Evidence standard required for action:** Stronger than a last-month ranking; volume floor and 90-day window; list defensible to the VP; if seller-fulfillment delay cannot be separated from other delay, report that limitation instead of forcing enrollments.
+* **Confirmed constraints:** Olist Brazil universe; delivered-only; 2018-01-01–2018-08-31; no US; no 2026 month; no plan/1P flags; qualitative acceptable/unacceptable without a formula; ~20 enrollment cap; VP-defensible evidence; do not treat 8.11% as a KPI.
+* **Accepted provisional assumptions:** ≥30 delivered orders for that seller in the analysis window.
+* **Open questions:** Target %; lateness formula and precision; 8 missing delivery dates; temporal anomalies; grain; plan-status (absent); live MySQL reconciliation.
+* **Evidence standard required for action:** Complete 2018 window, delivered Brazilian orders, volume floor with denominator shown, attribution limits stated, no one-month ranking, no invented geography.
 
-End of Stages 1–2. Do not begin Stage 3 from this document alone beyond using it as an input.
+**Source facts Stage 3 may rely on (already in the two documents, not invented here):** 99,441 orders; 112,650 item rows; 3,095 sellers; 96,478 delivered; 96,470 delivered with both delivery timestamps; 775 orders with no items; seller delivered-order median 6; partial 2016 and Sep–Oct 2018; no physical FKs; review_id and order_id not unique in reviews; geolocation many rows per ZIP; context-package grand total 1,450,922 is wrong, profile total 1,550,922 is the corrected sum.
+
+End of Stages 1–2. Do not begin Stage 3 beyond using this file as an input together with the Database Context Package and the Data Profile.
