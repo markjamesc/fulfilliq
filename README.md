@@ -48,7 +48,7 @@ flowchart TD
 | 1. Start | Identify the business decision behind the metric request | [Stages 1–2 dialogue](docs/Stages_01_02_Dialogue_and_Handoff.md) |
 | 2. Framing | Convert stakeholder language into one precise analytical question | [Stages 1–2 dialogue](docs/Stages_01_02_Dialogue_and_Handoff.md) |
 | 3. Design | Lock the KPI, population, grain, comparison groups, confounders, and decision rules | [Measurement design](docs/Stage_03_Measurement_Design.md) |
-| 4. Execution | Construct the seller-level evidence in SQL and independently validate and analyze it in R | [SQL](sql/Stage_04_FulfillIQ_Analysis.sql) · [R](r/Stage_04_FulfillIQ_R_Analysis.R) · [Evidence workbook](results/2026-09-02/FulfillIQ_R_Evidence_2026-09-02.xlsx) |
+| 4. Execution | Construct the seller-level evidence in SQL, then validate and analyze the SQL-derived seller export in R | [SQL](sql/Stage_04_FulfillIQ_Analysis.sql) · [R](r/Stage_04_FulfillIQ_R_Analysis.R) · [Evidence workbook](results/2026-09-02/FulfillIQ_R_Evidence_2026-09-02.xlsx) |
 | 5. Finish | Separate facts, interpretation, uncertainty, and recommendation | [Decision evaluation](docs/Stage_05_Decision_Evaluation.md) · [Decision brief](docs/Stage_05_Decision_Brief.pdf) |
 
 ## Measurement design
@@ -131,7 +131,7 @@ The script reads the locked path `output/Stage_04_seller_export.csv`, executes i
 - MySQL 8.0 analytical SQL
 - Grain control and join-risk management
 - R and tidyverse workflow engineering
-- Cross-language reconciliation logic
+- R-based validation of a SQL-derived analytical export
 - Data-quality gates and sensitivity analysis
 - Excel evidence publishing
 - Three-AI review without majority voting
