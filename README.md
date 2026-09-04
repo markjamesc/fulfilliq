@@ -6,6 +6,8 @@ FulfillIQ is an AI-augmented e-commerce analytics case study that turns an initi
 
 The project uses the public Brazilian Olist dataset in a fictional business scenario. The decision owner, deadline, operating constraints, and available actions are part of the case design; they are not claims about Olist's actual operations.
 
+![FulfillIQ seller-performance decision summary](assets/fulfilliq-seller-performance-decision.png)
+
 ## Executive result
 
 The executed analytical evidence supports enrolling **18 sellers**. The process deliberately leaves unused capacity rather than padding the list to the approximate 20-plan operating limit.
