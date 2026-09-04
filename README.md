@@ -34,8 +34,8 @@ The final analysis instead uses delivered seller-orders purchased from **1 Janua
 flowchart TD
     A["Metric request"] --> B["Decision and framing"]
     B --> C["Locked measurement design"]
-    C --> D["MySQL analysis specification"]
-    D --> E["Seller-level analytical export"]
+    C --> D["Reviewed MySQL specification"]
+    D --> E["Committed seller export"]
     E --> F["R validation and analysis"]
     F --> G["Three-AI interpretation review"]
     G --> H["18-seller recommendation"]
