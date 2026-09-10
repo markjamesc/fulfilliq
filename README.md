@@ -1,5 +1,7 @@
 # FulfillIQ
 
+> **Version 1 historical baseline.** Start with [FulfillIQ 2.0](https://github.com/markjamesc/fulfilliq-2.0) for the current case study, independent SQL/R reconciliation, and completed simulation handoff. The V1 results and analytical artifacts below describe the original run; its counts are not interchangeable with V2.
+
 FulfillIQ is an AI-augmented e-commerce analytics case study that turns an initially vague seller-performance request into a controlled operational decision using MySQL, SQL, R, Excel, and a five-stage decision workflow.
 
 > **Decision:** Which sellers, if any, should be enrolled in a 30-day late-fulfillment performance plan rather than left on standard terms?
