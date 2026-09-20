@@ -154,5 +154,5 @@ The script reads the locked path `output/Stage_04_seller_export.csv`, executes i
 
 - [Five-stage AI-Augmented Analyst Workflow](https://github.com/markjamesc/ai-augmented-analyst-workflow)
 - [AI-Augmented Bitcoin Proxy Analysis](https://github.com/markjamesc/ai-augmented-bitcoin-proxy-analysis)
-- [R Workflow Engine](https://github.com/markjamesc/r-workflow-engine)
+- [R Workflow Engine](https://github.com/markjamesc/ai-augmented-analyst-workflow/blob/main/docs/ENGINE.md)
 
